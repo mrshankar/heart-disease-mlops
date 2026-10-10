@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: heart-risk-api
+  namespace: heart-risk
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
+spec:
+  ingressClassName: nginx        # minikube: `minikube addons enable ingress`; k3s users: traefik
+  rules:
+    - host: heart-risk.local     # add "<ingress-ip> heart-risk.local" to /etc/hosts
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: heart-risk-api
+                port:
+                  name: http

@@ -1,0 +1,102 @@
+{
+  "model_name": "heart-disease-classifier",
+  "model_version": "1.0.0+327a95bf",
+  "registry_version": 1,
+  "model_family": "logistic_regression",
+  "estimator": "LogisticRegression",
+  "best_params": {
+    "C": 0.3,
+    "class_weight": "None",
+    "penalty": "l1"
+  },
+  "decision_threshold": 0.39,
+  "trained_at": "2026-10-10T14:40:39.306763+00:00",
+  "git_commit": "unknown",
+  "data_sha256": "327a95bf2ae71439e050275d2b56a3262fe9e525842b2dbc43999b7d72b4f76c",
+  "n_train": 734,
+  "n_test": 184,
+  "input_features": [
+    "age",
+    "trestbps",
+    "chol",
+    "thalach",
+    "oldpeak",
+    "sex",
+    "cp",
+    "fbs",
+    "restecg",
+    "exang",
+    "slope",
+    "ca",
+    "thal"
+  ],
+  "engineered_features": [
+    "hr_reserve_pct",
+    "age_x_oldpeak"
+  ],
+  "cv_metrics": {
+    "cv_accuracy_mean": 0.8351,
+    "cv_accuracy_std": 0.0254,
+    "cv_precision_mean": 0.8526,
+    "cv_precision_std": 0.027,
+    "cv_recall_mean": 0.8497,
+    "cv_recall_std": 0.0363,
+    "cv_f1_mean": 0.8506,
+    "cv_f1_std": 0.024,
+    "cv_roc_auc_mean": 0.9049,
+    "cv_roc_auc_std": 0.0136,
+    "cv_train_roc_auc_mean": 0.9163
+  },
+  "test_metrics": {
+    "test_accuracy": 0.8315,
+    "test_precision": 0.8087,
+    "test_recall": 0.9118,
+    "test_specificity": 0.7317,
+    "test_f1": 0.8571,
+    "test_f2": 0.8891,
+    "test_roc_auc": 0.8995,
+    "test_pr_auc": 0.9126,
+    "test_brier": 0.1234,
+    "test_tp": 93.0,
+    "test_fp": 22.0,
+    "test_tn": 60.0,
+    "test_fn": 9.0
+  },
+  "per_site_test_metrics": {
+    "cleveland": {
+      "accuracy": 0.8852,
+      "precision": 0.8182,
+      "recall": 0.9643,
+      "roc_auc": 0.96,
+      "n": 61
+    },
+    "hungarian": {
+      "accuracy": 0.7759,
+      "precision": 0.6667,
+      "recall": 0.7619,
+      "roc_auc": 0.8597,
+      "n": 58
+    },
+    "switzerland": {
+      "accuracy": 0.92,
+      "precision": 0.9565,
+      "recall": 0.9565,
+      "roc_auc": 0.7609,
+      "n": 25
+    },
+    "va_long_beach": {
+      "accuracy": 0.775,
+      "precision": 0.8,
+      "recall": 0.9333,
+      "roc_auc": 0.6967,
+      "n": 40
+    }
+  },
+  "mlflow": {
+    "parent_run_id": "9ca5114bb1604ed58c00296ff5519578",
+    "champion_run_id": "786c9c5ab40d4147bdc7e39b9d10f947",
+    "model_uri": "runs:/786c9c5ab40d4147bdc7e39b9d10f947/model"
+  },
+  "python": "3.13.16",
+  "sklearn": "1.5.2"
+}

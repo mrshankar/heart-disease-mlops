@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: heart-risk-api-config
+  namespace: heart-risk
+data:
+  LOG_LEVEL: "INFO"
+  # Leave empty to use the threshold chosen at training time (model_metadata.json).
+  # Set e.g. "0.5" to override without rebuilding the image.
+  DECISION_THRESHOLD: ""

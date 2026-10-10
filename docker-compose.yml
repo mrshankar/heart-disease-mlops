@@ -1,0 +1,44 @@
+# Local production-like stack:  docker compose up --build
+#   API          http://localhost:8000/docs   (live monitor: /monitoring)
+#   Prometheus   http://localhost:9090
+#   Grafana      http://localhost:3000        (admin / admin, dashboard "Heart Disease Risk API")
+#   MLflow UI    http://localhost:5000        (reads ./mlflow.db + ./mlartifacts from `make train`)
+# Generate traffic:  python scripts/load_test.py --requests 500 --delay 0.05
+services:
+  api:
+    build: .
+    image: heart-risk-api:latest
+    ports: ["8000:8000"]
+    environment:
+      LOG_LEVEL: INFO
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    ports: ["9090:9090"]
+    depends_on: [api]
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/heart-risk-api.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.22.1
+    # artifact URIs stored in mlflow.db are absolute host paths, so mount at the same path
+    command: mlflow ui --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:////mlflow/mlflow.db
+    volumes:
+      - ./mlflow.db:/mlflow/mlflow.db
+      - ./mlartifacts:${PWD}/mlartifacts
+    ports: ["5000:5000"]
+    profiles: [tracking]

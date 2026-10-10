@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# kubectl apply -k k8s/base               -> API (ingress-nginx clusters: minikube, kind, GKE...)
+# kubectl apply -k k8s/overlays/k3s       -> API with Traefik ingress (k3s / Rancher Desktop)
+# kubectl apply -k k8s/monitoring  -> Prometheus + Grafana in the same namespace
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - hpa.yaml
+  - pdb.yaml

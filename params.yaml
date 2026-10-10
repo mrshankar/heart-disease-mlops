@@ -1,0 +1,38 @@
+# Training configuration - every value here is logged to MLflow.
+seed: 42
+test_size: 0.2
+cv_folds: 5
+selection_metric: roc_auc        # chosen on cross-validation, never on the test set
+threshold:
+  strategy: f_beta               # pick decision threshold on out-of-fold predictions
+  beta: 2.0                      # screening use-case: recall weighted 2x precision
+  min: 0.25
+  max: 0.65
+  min_specificity: 0.70          # false-alarm budget: keep >= 70% of healthy patients negative
+add_missing_indicators: false    # see features.build_preprocessor docstring
+experiment_name: heart-disease-risk
+registered_model_name: heart-disease-classifier
+
+models:
+  logistic_regression:
+    estimator: LogisticRegression
+    fixed: {max_iter: 5000, solver: liblinear}
+    grid:
+      C: [0.01, 0.03, 0.1, 0.3, 1.0, 3.0]
+      penalty: [l1, l2]
+      class_weight: [null, balanced]
+  random_forest:
+    estimator: RandomForestClassifier
+    fixed: {n_estimators: 300, n_jobs: -1}
+    grid:
+      max_depth: [4, 6, 10, null]
+      min_samples_leaf: [1, 3, 8]
+      max_features: [sqrt, 0.5]
+  gradient_boosting:
+    estimator: HistGradientBoostingClassifier
+    fixed: {max_iter: 300, early_stopping: false}
+    grid:
+      learning_rate: [0.03, 0.1]
+      max_depth: [2, 3, null]
+      l2_regularization: [0.0, 1.0]
+      min_samples_leaf: [10, 30]

@@ -1,0 +1,250 @@
+# CI/CD for the heart disease risk API
+#
+#   lint ──► test ──► train ──► docker (build + smoke test + push) ──► deploy-kind (k8s e2e)
+#
+# Every job uploads its logs/reports as workflow artifacts and writes a
+# summary to the run page. Any lint error, failing test, failed training
+# quality gate, broken container or failed rollout stops the pipeline.
+
+name: ci-cd
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  IMAGE_NAME: heart-risk-api
+  MIN_TEST_ROC_AUC: "0.85"     # quality gate for the trained model
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install flake8==7.1.1
+      - name: flake8
+        run: |
+          set -o pipefail
+          flake8 src tests scripts kubeflow --tee --output-file=flake8-report.txt
+          echo "### Lint: flake8 passed" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-report
+          path: flake8-report.txt
+
+  test:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install dependencies (clean environment)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+      - name: Verify dataset checksums
+        run: cd data/raw && sha256sum -c CHECKSUMS.sha256
+      - name: Unit tests
+        run: |
+          mkdir -p test-results
+          pytest -v --junitxml=test-results/junit.xml \
+                 --cov=cardiorisk --cov-report=xml:test-results/coverage.xml \
+                 --cov-report=html:test-results/htmlcov --cov-report=term-missing \
+                 2>&1 | tee test-results/pytest.log
+        shell: bash -eo pipefail {0}
+      - name: Test summary
+        if: always()
+        run: |
+          python - <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          import xml.etree.ElementTree as ET
+          r = ET.parse("test-results/junit.xml").getroot()
+          s = r if r.tag == "testsuite" else r.find("testsuite")
+          c = ET.parse("test-results/coverage.xml").getroot()
+          print("### Tests")
+          print(f"| tests | failures | errors | skipped | coverage |\n|---|---|---|---|---|")
+          print(f"| {s.get('tests')} | {s.get('failures')} | {s.get('errors')} | {s.get('skipped')} "
+                f"| {float(c.get('line-rate'))*100:.1f}% |")
+          EOF
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test-results/
+
+  train:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: |
+          pip install -r requirements.txt
+          pip install -e .
+      - name: Data (download script, falls back to committed raw files)
+        run: python scripts/download_data.py --skip-if-present
+      - name: EDA
+        run: python -m cardiorisk.eda | tee eda.log
+      - name: Train + track with MLflow
+        run: python -m cardiorisk.train 2>&1 | tee train.log
+        shell: bash -eo pipefail {0}
+      - name: Quality gate
+        run: |
+          python - <<'EOF'
+          import json, os, sys
+          m = json.load(open("models/model_metadata.json"))
+          auc = m["test_metrics"]["test_roc_auc"]
+          gate = float(os.environ["MIN_TEST_ROC_AUC"])
+          summary = open(os.environ["GITHUB_STEP_SUMMARY"], "a")
+          summary.write(f"### Training\nChampion **{m['model_family']}** "
+                        f"(threshold {m['decision_threshold']})\n\n| metric | value |\n|---|---|\n")
+          for k, v in {**m["cv_metrics"], **m["test_metrics"]}.items():
+              if k not in ("test_tp", "test_fp", "test_tn", "test_fn"):
+                  summary.write(f"| {k} | {v} |\n")
+          if auc < gate:
+              print(f"::error::test ROC-AUC {auc:.3f} below gate {gate}")
+              sys.exit(1)
+          print(f"Quality gate passed: test ROC-AUC {auc:.3f} >= {gate}")
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: model
+          path: |
+            models/model.joblib
+            models/model_metadata.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: training-reports
+          path: |
+            reports/
+            train.log
+            eda.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mlflow-tracking
+          path: |
+            mlflow.db
+            mlartifacts/
+
+  docker:
+    needs: train
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: model
+          path: models
+      - id: meta
+        run: echo "image=${IMAGE_NAME}:${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - name: Build image
+        run: |
+          docker build \
+            --build-arg GIT_SHA=${GITHUB_SHA} \
+            --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            -t ${{ steps.meta.outputs.image }} -t ${IMAGE_NAME}:latest . 2>&1 | tee docker-build.log
+        shell: bash -eo pipefail {0}
+      - name: Smoke test container
+        run: |
+          docker run -d --name api -p 8000:8000 ${{ steps.meta.outputs.image }}
+          for i in $(seq 1 30); do curl -sf localhost:8000/ready && break; sleep 1; done
+          curl -sf localhost:8000/health
+          echo "--- /predict high risk";  curl -sf -X POST localhost:8000/predict -H 'content-type: application/json' -d @samples/high_risk.json | tee pred_high.json
+          echo "--- /predict low risk";   curl -sf -X POST localhost:8000/predict -H 'content-type: application/json' -d @samples/low_risk.json  | tee pred_low.json
+          echo "--- /predict/batch";      curl -sf -X POST localhost:8000/predict/batch -H 'content-type: application/json' -d @samples/batch.json
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8000/predict -H 'content-type: application/json' -d @samples/invalid.json)
+          test "$code" = "422"
+          python3 -c "import json; a=json.load(open('pred_high.json')); b=json.load(open('pred_low.json')); assert a['prediction']==1 and b['prediction']==0, (a,b); print('predictions OK')"
+          curl -sf localhost:8000/metrics | grep cardiorisk_predictions_total
+          docker inspect --format '{{.State.Health.Status}}' api
+      - name: Container logs
+        if: always()
+        run: docker logs api > container.log 2>&1 || true
+      - name: Push to GHCR (main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          for tag in ${GITHUB_SHA::7} latest; do
+            docker tag ${{ steps.meta.outputs.image }} ghcr.io/${OWNER}/${IMAGE_NAME}:${tag}
+            docker push ghcr.io/${OWNER}/${IMAGE_NAME}:${tag}
+          done
+      - run: docker save ${{ steps.meta.outputs.image }} -o image.tar
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: image.tar
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docker-logs
+          path: |
+            docker-build.log
+            container.log
+            pred_*.json
+
+  deploy-kind:
+    needs: docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: mlops
+      - name: Load image and deploy manifests
+        run: |
+          kind load image-archive image.tar --name mlops
+          kubectl apply -f k8s/base/namespace.yaml
+          kubectl apply -k k8s/base
+          kubectl -n heart-risk set image deployment/heart-risk-api api=${{ needs.docker.outputs.image }}
+          kubectl -n heart-risk rollout status deployment/heart-risk-api --timeout=180s
+      - name: Verify endpoints through the Service
+        run: |
+          kubectl -n heart-risk port-forward svc/heart-risk-api 8080:80 > pf.log 2>&1 &
+          sleep 5
+          curl -sf localhost:8080/ready
+          curl -sf -X POST localhost:8080/predict -H 'content-type: application/json' -d @samples/high_risk.json
+          python3 scripts/load_test.py --url http://localhost:8080 --requests 100
+      - name: Collect cluster state
+        if: always()
+        run: |
+          mkdir -p k8s-logs
+          kubectl get all,ingress,hpa,pdb -n heart-risk -o wide > k8s-logs/resources.txt 2>&1 || true
+          kubectl -n heart-risk describe deployment heart-risk-api > k8s-logs/describe.txt 2>&1 || true
+          kubectl -n heart-risk logs -l app=heart-risk-api --tail=200 > k8s-logs/pods.log 2>&1 || true
+          cat k8s-logs/resources.txt
+          { echo '### Kubernetes deployment'; echo '```'; cat k8s-logs/resources.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k8s-deployment
+          path: k8s-logs/

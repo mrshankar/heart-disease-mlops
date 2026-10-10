@@ -1,0 +1,171 @@
+{
+  "champion": "logistic_regression",
+  "decision_threshold": 0.39,
+  "models": {
+    "logistic_regression": {
+      "cv_accuracy_mean": 0.8351,
+      "cv_accuracy_std": 0.0254,
+      "cv_precision_mean": 0.8526,
+      "cv_precision_std": 0.027,
+      "cv_recall_mean": 0.8497,
+      "cv_recall_std": 0.0363,
+      "cv_f1_mean": 0.8506,
+      "cv_f1_std": 0.024,
+      "cv_roc_auc_mean": 0.9049,
+      "cv_roc_auc_std": 0.0136,
+      "cv_train_roc_auc_mean": 0.9163,
+      "overfit_gap_roc_auc": 0.0114,
+      "test_accuracy": 0.8424,
+      "test_precision": 0.8288,
+      "test_recall": 0.902,
+      "test_specificity": 0.7683,
+      "test_f1": 0.8638,
+      "test_f2": 0.8863,
+      "test_roc_auc": 0.8995,
+      "test_pr_auc": 0.9126,
+      "test_brier": 0.1234,
+      "test_tp": 92.0,
+      "test_fp": 19.0,
+      "test_tn": 63.0,
+      "test_fn": 10.0,
+      "best_params": {
+        "C": 0.3,
+        "class_weight": "None",
+        "penalty": "l1"
+      },
+      "run_id": "a8ee80fbfc5640078d495430148bb56a"
+    },
+    "random_forest": {
+      "cv_accuracy_mean": 0.8228,
+      "cv_accuracy_std": 0.0271,
+      "cv_precision_mean": 0.8355,
+      "cv_precision_std": 0.0262,
+      "cv_recall_mean": 0.8471,
+      "cv_recall_std": 0.0414,
+      "cv_f1_mean": 0.8407,
+      "cv_f1_std": 0.0258,
+      "cv_roc_auc_mean": 0.8949,
+      "cv_roc_auc_std": 0.0214,
+      "cv_train_roc_auc_mean": 0.9611,
+      "overfit_gap_roc_auc": 0.0662,
+      "test_accuracy": 0.8424,
+      "test_precision": 0.8349,
+      "test_recall": 0.8922,
+      "test_specificity": 0.7805,
+      "test_f1": 0.8626,
+      "test_f2": 0.8801,
+      "test_roc_auc": 0.8881,
+      "test_pr_auc": 0.8837,
+      "test_brier": 0.1317,
+      "test_tp": 91.0,
+      "test_fp": 18.0,
+      "test_tn": 64.0,
+      "test_fn": 11.0,
+      "best_params": {
+        "max_depth": 6,
+        "max_features": "sqrt",
+        "min_samples_leaf": 3
+      },
+      "run_id": "2bf26ce64e27441c8380f478d58db8ee"
+    },
+    "gradient_boosting": {
+      "cv_accuracy_mean": 0.8201,
+      "cv_accuracy_std": 0.0339,
+      "cv_precision_mean": 0.83,
+      "cv_precision_std": 0.0436,
+      "cv_recall_mean": 0.8521,
+      "cv_recall_std": 0.0316,
+      "cv_f1_mean": 0.8401,
+      "cv_f1_std": 0.028,
+      "cv_roc_auc_mean": 0.8912,
+      "cv_roc_auc_std": 0.0199,
+      "cv_train_roc_auc_mean": 0.947,
+      "overfit_gap_roc_auc": 0.0558,
+      "test_accuracy": 0.8424,
+      "test_precision": 0.8349,
+      "test_recall": 0.8922,
+      "test_specificity": 0.7805,
+      "test_f1": 0.8626,
+      "test_f2": 0.8801,
+      "test_roc_auc": 0.8938,
+      "test_pr_auc": 0.9011,
+      "test_brier": 0.125,
+      "test_tp": 91.0,
+      "test_fp": 18.0,
+      "test_tn": 64.0,
+      "test_fn": 11.0,
+      "best_params": {
+        "l2_regularization": 1.0,
+        "learning_rate": 0.03,
+        "max_depth": 2,
+        "min_samples_leaf": 10
+      },
+      "run_id": "09db48fe542f49fe9c477d3ba3c6a305"
+    }
+  },
+  "ablation_missing_indicators": {
+    "oof_roc_auc_with_indicators": 0.9045,
+    "oof_roc_auc_without_indicators": 0.9044,
+    "test_roc_auc_with_indicators": 0.9034
+  },
+  "champion_test": {
+    "test_accuracy": 0.8315,
+    "test_precision": 0.8087,
+    "test_recall": 0.9118,
+    "test_specificity": 0.7317,
+    "test_f1": 0.8571,
+    "test_f2": 0.8891,
+    "test_roc_auc": 0.8995,
+    "test_pr_auc": 0.9126,
+    "test_brier": 0.1234,
+    "test_tp": 93.0,
+    "test_fp": 22.0,
+    "test_tn": 60.0,
+    "test_fn": 9.0
+  },
+  "per_site_test": {
+    "cleveland": {
+      "accuracy": 0.8852,
+      "precision": 0.8182,
+      "recall": 0.9643,
+      "roc_auc": 0.96,
+      "n": 61
+    },
+    "hungarian": {
+      "accuracy": 0.7759,
+      "precision": 0.6667,
+      "recall": 0.7619,
+      "roc_auc": 0.8597,
+      "n": 58
+    },
+    "switzerland": {
+      "accuracy": 0.92,
+      "precision": 0.9565,
+      "recall": 0.9565,
+      "roc_auc": 0.7609,
+      "n": 25
+    },
+    "va_long_beach": {
+      "accuracy": 0.775,
+      "precision": 0.8,
+      "recall": 0.9333,
+      "roc_auc": 0.6967,
+      "n": 40
+    }
+  },
+  "permutation_importance": {
+    "cp": 0.0565,
+    "ca": 0.0221,
+    "fbs": 0.0138,
+    "slope": 0.0132,
+    "oldpeak": 0.0114,
+    "sex": 0.0108,
+    "thal": 0.0074,
+    "exang": 0.0037,
+    "chol": 0.003,
+    "thalach": 0.0021,
+    "age": 0.0014,
+    "trestbps": 0.0009,
+    "restecg": -0.0
+  }
+}

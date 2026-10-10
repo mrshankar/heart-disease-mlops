@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: heart-risk-api
+  namespace: heart-risk
+  labels:
+    app: heart-risk-api
+spec:
+  # LoadBalancer: gets a public IP on GKE/EKS/AKS, localhost on Docker Desktop,
+  # `minikube tunnel` on minikube, and stays <pending> on plain kind (use the Ingress
+  # or `kubectl port-forward` there).
+  type: LoadBalancer
+  selector:
+    app: heart-risk-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

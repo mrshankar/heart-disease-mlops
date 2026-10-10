@@ -1,0 +1,42 @@
+groups:
+  - name: heart-risk-api
+    rules:
+      - alert: HeartRiskApiDown
+        expr: up{job="heart-risk-api"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations:
+          summary: "Heart risk API target {{ $labels.instance }} is down"
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(cardiorisk_http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(cardiorisk_http_requests_total[5m])), 1e-9) > 0.05
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "More than 5% of requests are failing with 5xx"
+      - alert: SlowPredictions
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(cardiorisk_http_request_duration_seconds_bucket{endpoint="/predict"}[5m]))) > 0.25
+        for: 5m
+        labels: {severity: warning}
+        annotations:
+          summary: "p95 /predict latency above 250 ms"
+      - alert: PredictionDrift
+        # Training base rate is ~0.55. A sustained shift in the share of positive
+        # predictions suggests input drift (different patient mix or broken upstream data).
+        expr: |
+          abs(
+            sum(rate(cardiorisk_predictions_total{outcome="1"}[30m]))
+              / clamp_min(sum(rate(cardiorisk_predictions_total[30m])), 1e-9) - 0.55
+          ) > 0.25
+        for: 15m
+        labels: {severity: info}
+        annotations:
+          summary: "Positive prediction rate drifted more than 25 points from training base rate"
+      - alert: ManyMissingInputs
+        expr: sum(rate(cardiorisk_missing_inputs_total[15m])) / clamp_min(sum(rate(cardiorisk_predictions_total[15m])), 1e-9) > 3
+        for: 15m
+        labels: {severity: info}
+        annotations:
+          summary: "Requests are missing on average more than 3 optional features (imputation-heavy)"

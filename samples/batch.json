@@ -1,0 +1,5 @@
+{"patients": [
+ {"age": 58, "sex": 1, "cp": 4, "trestbps": 140, "chol": 260, "fbs": 0, "restecg": 2, "thalach": 120, "exang": 1, "oldpeak": 2.4, "slope": 2, "ca": 2, "thal": 7},
+ {"age": 37, "sex": 0, "cp": 3, "trestbps": 120, "chol": 200, "fbs": 0, "restecg": 0, "thalach": 185, "exang": 0, "oldpeak": 0.0, "slope": 1, "ca": 0, "thal": 3},
+ {"age": 52, "sex": 1, "cp": 2, "trestbps": 128, "chol": 205, "thalach": 165, "exang": 0, "oldpeak": 0.4}
+]}

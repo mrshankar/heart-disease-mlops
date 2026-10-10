@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# k3s / Rancher Desktop ship Traefik instead of ingress-nginx:
+#   kubectl apply -k k8s/overlays/k3s
+resources:
+  - ../../base
+patches:
+  - target: {kind: Ingress, name: heart-risk-api}
+    patch: |-
+      - op: replace
+        path: /spec/ingressClassName
+        value: traefik

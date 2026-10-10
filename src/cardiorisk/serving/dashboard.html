@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heart Risk API Monitor</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2530; --muted:#6b7480; --line:#e3e6ea;
+          --pos:#d8573b; --neg:#3b7dd8; --ok:#2e9e6a; --warn:#c98a1b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#12161c; --card:#1b2129; --ink:#e7ebf0; --muted:#97a1ad; --line:#2a323c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:18px 24px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; }
+  h1 { font-size:18px; margin:0; }
+  .muted { color:var(--muted); }
+  main { padding:20px 24px; max-width:1100px; margin:auto; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; }
+  .tile { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .tile .v { font-size:26px; font-weight:650; font-variant-numeric:tabular-nums; }
+  .tile .k { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .panel { margin-top:16px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .panel h2 { font-size:14px; margin:0 0 10px; }
+  svg { width:100%; height:180px; display:block; }
+  table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  td, th { text-align:left; padding:4px 8px; border-bottom:1px solid var(--line); }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Heart Disease Risk API - live monitor</h1>
+  <span class="muted" id="meta">connecting...</span>
+</header>
+<main>
+  <section class="tiles">
+    <div class="tile"><div class="k">Predictions served</div><div class="v" id="preds">-</div></div>
+    <div class="tile"><div class="k">Avg /predict latency</div><div class="v" id="lat">-</div></div>
+    <div class="tile"><div class="k">Positive rate (recent)</div><div class="v" id="pos">-</div></div>
+    <div class="tile"><div class="k">Validation errors</div><div class="v" id="err">-</div></div>
+    <div class="tile"><div class="k">Uptime</div><div class="v" id="up">-</div></div>
+  </section>
+  <section class="panel">
+    <h2>Last 60 predicted probabilities <span class="muted">(<span class="dot" style="background:var(--pos)"></span>at-risk, <span class="dot" style="background:var(--neg)"></span>not at-risk)</span></h2>
+    <svg id="chart" viewBox="0 0 600 180" preserveAspectRatio="none" role="img" aria-label="recent probabilities"></svg>
+  </section>
+  <section class="panel">
+    <h2>HTTP responses by status</h2>
+    <table><tbody id="status"></tbody></table>
+    <p class="muted">Raw Prometheus metrics: <a href="/metrics">/metrics</a> &middot; API docs: <a href="/docs">/docs</a></p>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+function fmtUp(s){ const h=Math.floor(s/3600), m=Math.floor(s%3600/60); return h?`${h}h ${m}m`:`${m}m ${Math.floor(s%60)}s`; }
+function draw(recent){
+  const svg=$("chart"), W=600, H=180, n=Math.max(recent.length,1), bw=W/60;
+  let out=`<line x1="0" x2="${W}" y1="${H/2}" y2="${H/2}" stroke="currentColor" stroke-opacity=".15" stroke-dasharray="4 4"/>`;
+  recent.forEach((r,i)=>{ const h=Math.max(2,r.p*(H-10)); const c=r.y?"var(--pos)":"var(--neg)";
+    out+=`<rect x="${i*bw+1}" y="${H-h}" width="${bw-2}" height="${h}" rx="2" fill="${c}"><title>p=${r.p}</title></rect>`; });
+  svg.innerHTML=out;
+}
+async function tick(){
+  try{
+    const s = await (await fetch("/monitoring/stats")).json();
+    $("meta").textContent = `model ${s.model_version}`;
+    $("preds").textContent = s.predictions_total;
+    $("lat").textContent = s.avg_predict_latency_ms==null ? "-" : s.avg_predict_latency_ms+" ms";
+    $("pos").textContent = s.positive_rate_recent==null ? "-" : Math.round(s.positive_rate_recent*100)+"%";
+    $("err").textContent = s.validation_errors;
+    $("up").textContent = fmtUp(s.uptime_s);
+    $("status").innerHTML = Object.entries(s.requests_by_status).sort()
+      .map(([k,v])=>`<tr><td><span class="dot" style="background:${k.startsWith("2")?"var(--ok)":"var(--warn)"}"></span>${k}</td><td>${v}</td></tr>`).join("");
+    draw(s.recent);
+  }catch(e){ $("meta").textContent="API unreachable"; }
+}
+tick(); setInterval(tick, 2000);
+</script>
+</body>
+</html>
