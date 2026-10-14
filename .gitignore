@@ -15,3 +15,4 @@ mlflow.db
 mlartifacts/
 kubeflow/heart_disease_pipeline.yaml
 .ipynb_checkpoints/
+logs/

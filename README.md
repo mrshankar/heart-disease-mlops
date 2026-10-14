@@ -46,6 +46,25 @@ It also runs end to end in **BITS Prayogshala** (Kubeflow).
 └── report/                   final report (docx) + video script
 ```
 
+## 0. One command: run the entire flow
+
+```bash
+git clone https://github.com/mrshankar/heart-disease-mlops.git && cd heart-disease-mlops
+./run_all.sh            # setup -> data -> lint+tests -> EDA+training (MLflow) -> serve+smoke+load test -> docker
+./run_all.sh --k8s      # ... plus deploy to the current kubectl cluster and verify it
+```
+
+| Option | Effect |
+|---|---|
+| `--k8s` | also deploy to Kubernetes (kind / minikube / k3s / Docker Desktop / cloud) and test it |
+| `--only <stage>` | run selected stages: `setup data quality train serve docker k8s` (repeatable) |
+| `--skip <stage>` | skip a stage, e.g. `--skip docker` (repeatable) |
+| `--no-venv` | use the current Python instead of creating `.venv` (e.g. a Prayogshala notebook terminal) |
+| `--mlflow-ui` | leave the MLflow UI running on port 5000 at the end |
+
+Each stage logs to `logs/<timestamp>/<stage>.log`. The script stops at the first failing stage,
+prints the end of that stage's log, and exits non-zero. The Docker stage is skipped automatically if Docker isn't available.
+
 ## 1. Setup
 
 Requires Python 3.10-3.13 (CI and Docker use 3.11).

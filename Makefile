@@ -4,7 +4,7 @@ IMAGE ?= heart-risk-api
 TAG ?= latest
 
 .PHONY: help install data eda train test lint mlflow-ui serve docker-build docker-run smoke \
-        compose-up compose-down k8s-deploy k8s-deploy-k3s k8s-monitoring k8s-verify load sync-monitoring kfp all clean
+        compose-up compose-down k8s-deploy k8s-deploy-k3s k8s-monitoring k8s-verify load sync-monitoring kfp all all-k8s clean
 
 help:            ## list targets
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -78,7 +78,11 @@ sync-monitoring: ## copy dashboard/alerts into the k8s kustomization
 kfp:             ## compile the Kubeflow pipeline (pip install "kfp>=2.7,<3")
 	$(PY) kubeflow/pipeline.py --compile-only
 
-all: install lint test train docker-build  ## full local pipeline
+all:             ## full pipeline via run_all.sh (setup -> docker)
+	./run_all.sh
+
+all-k8s:         ## full pipeline including Kubernetes deploy
+	./run_all.sh --k8s
 
 clean:
 	rm -rf .pytest_cache .coverage htmlcov test-results mlruns
