@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import platform
+import shutil
 import subprocess
 import tempfile
 import time
@@ -103,10 +104,20 @@ def log_sklearn_model(model, name: str, X_example: pd.DataFrame, registered: str
     # MLflow model so `mlflow.pyfunc.load_model` works in a fresh environment.
     kwargs = dict(signature=signature, input_example=X_example.head(3),
                   registered_model_name=registered, serialization_format="cloudpickle",
-                  code_paths=[str(Path(__file__).resolve().parent)])
+                  code_paths=[str(Path(__file__).resolve().parent)],
+                  pip_requirements=_serving_requirements())
     if int(mlflow.__version__.split(".")[0]) >= 3:
         return mlflow.sklearn.log_model(model, name=name, **kwargs)
     return mlflow.sklearn.log_model(model, artifact_path=name, **kwargs)
+
+
+def _serving_requirements() -> list[str] | None:
+    """Pinned runtime deps for the MLflow model (stops MLflow guessing, e.g. 'cardiorisk' from PyPI)."""
+    req = config.PROJECT_ROOT / "requirements-serve.txt"
+    if not req.exists():
+        return None
+    lines = [ln.split("#")[0].strip() for ln in req.read_text().splitlines()]
+    return [ln for ln in lines if ln and not ln.startswith("-")]
 
 
 def _clean_params(d: dict) -> dict:
@@ -336,15 +347,20 @@ def run_training(params_path: Path | str = config.PARAMS_FILE) -> dict:
     }
     config.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     (config.REPORTS_DIR / "metrics.json").write_text(json.dumps(report, indent=2, default=str))
+    config.FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     for f in list(tmp.glob("*.png")):
-        f.replace(config.FIGURES_DIR / f"model_{f.name}")
+        # shutil.move, not Path.replace: the temp dir can be on another filesystem
+        # (e.g. /tmp on a separate disk), where a rename fails with EXDEV.
+        shutil.move(str(f), str(config.FIGURES_DIR / f"model_{f.name}"))
+    shutil.rmtree(tmp, ignore_errors=True)
     log.info("Saved %s and %s", config.MODEL_PATH, config.METADATA_PATH)
     return report
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    logging.getLogger("mlflow").setLevel(logging.WARNING)
+    for noisy in ("mlflow", "alembic", "matplotlib", "urllib3"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     report = run_training()
     print(json.dumps({k: report[k] for k in ("champion", "decision_threshold", "champion_test",
                                              "ablation_missing_indicators", "per_site_test")}, indent=2))

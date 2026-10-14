@@ -29,8 +29,19 @@ def test_eda_produces_figures(isolated_outputs):
     assert len(list((isolated_outputs / "reports" / "figures").glob("*.png"))) == 7
 
 
-def test_mini_training_run(isolated_outputs):
+def test_mini_training_run(isolated_outputs, monkeypatch):
+    import errno
+    import pathlib
+
     from cardiorisk.train import run_training
+
+    # Regression: on the Prayogshala VM /tmp is a different filesystem from $HOME, so
+    # renames out of the temp dir fail with EXDEV. Simulate that for every rename.
+    def no_cross_device_rename(self, target):
+        raise OSError(errno.EXDEV, "Invalid cross-device link (simulated)")
+
+    monkeypatch.setattr(pathlib.Path, "replace", no_cross_device_rename)
+    monkeypatch.setattr(pathlib.Path, "rename", no_cross_device_rename)
 
     params = yaml.safe_load(config.PARAMS_FILE.read_text())
     params["experiment_name"] = "smoke-test"
@@ -60,3 +71,4 @@ def test_mini_training_run(isolated_outputs):
     runs = mlflow.search_runs(experiment_names=["smoke-test"])
     kinds = set(runs["tags.run_type"])
     assert {"pipeline", "model", "grid_candidate", "ablation", "champion"} <= kinds
+    assert (config.FIGURES_DIR / "model_champion_roc_pr.png").exists()

@@ -22,12 +22,15 @@ from sklearn.metrics import (  # noqa: E402
     precision_score,
     recall_score,
     roc_auc_score,
+    make_scorer,
     roc_curve,
 )
 
 CV_SCORING = {
     "accuracy": "accuracy",
-    "precision": "precision",
+    # zero_division=0: very strong regularisation can make a CV fold predict only one
+    # class; precision is then 0 by definition instead of an UndefinedMetricWarning flood
+    "precision": make_scorer(precision_score, zero_division=0),
     "recall": "recall",
     "f1": "f1",
     "roc_auc": "roc_auc",

@@ -186,4 +186,5 @@ def run_eda(out_dir: Path | str = config.FIGURES_DIR) -> dict:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("matplotlib").setLevel(logging.WARNING)
     print(json.dumps(run_eda(), indent=2, default=str)[:1500])
