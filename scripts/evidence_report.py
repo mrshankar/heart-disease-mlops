@@ -76,6 +76,13 @@ def pre(text: str, max_lines: int = 60) -> str:
     return f"<pre>{esc(chr(10).join(lines))}</pre>"
 
 
+def _rel(p: Path) -> str:
+    try:
+        return str(p.resolve().relative_to(ROOT))
+    except ValueError:
+        return str(p)
+
+
 def git_commit() -> str:
     try:
         return subprocess.check_output(["git", "log", "--oneline", "-1"], cwd=ROOT, text=True).strip()
@@ -124,6 +131,15 @@ def main() -> int:
     logs_root = ROOT / "logs"
     log_dir = args.logs or (max((p for p in logs_root.iterdir() if p.is_dir()), default=None)
                             if logs_root.exists() else None)
+    if log_dir is not None:
+        # accept relative paths (from the repo root or the current dir) as well as absolute ones
+        log_dir = log_dir if log_dir.is_absolute() else (Path.cwd() / log_dir)
+        if not log_dir.exists():
+            log_dir = ROOT / args.logs
+        log_dir = log_dir.resolve()
+        if not log_dir.is_dir():
+            print(f"logs directory not found: {args.logs}")
+            return 1
     L = (lambda name: read(log_dir / f"{name}.log")) if log_dir else (lambda name: "")
 
     meta = json.loads(read(ROOT / "models/model_metadata.json") or "{}")
@@ -135,7 +151,7 @@ def main() -> int:
     summary = strip_ansi(read(log_dir / "summary.txt")) if log_dir else ""
     sections.append(("Pipeline run", f"""
       <p>Commit <code>{esc(git_commit())}</code> &middot; host <code>{esc(platform.node())}</code> &middot;
-      Python {esc(platform.python_version())} &middot; logs <code>{esc(log_dir.relative_to(ROOT) if log_dir else '-')}</code></p>
+      Python {esc(platform.python_version())} &middot; logs <code>{esc(_rel(log_dir) if log_dir else '-')}</code></p>
       {pre(summary) if summary else '<p class=muted>No summary.txt (run ./run_all.sh).</p>'}"""))
 
     # ---- key results
@@ -204,7 +220,7 @@ img{{width:100%;border:1px solid var(--line);border-radius:6px;background:#fff}}
 <header><h1>Heart Disease Risk - MLOps pipeline run evidence</h1>
 <p>AIMLCZG523 Assignment 1 &middot; Shankaraguru Ramdurg (2025AE05523) &middot; generated {datetime.now():%Y-%m-%d %H:%M}</p></header>
 <nav>{nav}</nav><main>{body}</main></body></html>""")
-    print(f"evidence report: {OUT.relative_to(ROOT)}  (open it in a browser)")
+    print(f"evidence report: {OUT}  (open it in a browser)")
     return 0
 
 
