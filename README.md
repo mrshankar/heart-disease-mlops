@@ -43,7 +43,7 @@ a GitHub Actions CI/CD pipeline, a Docker image, Kubernetes manifests, and Prome
 ├── kubeflow/pipeline.py      KFP v2 pipeline for Prayogshala
 ├── .github/workflows/ci-cd.yml
 ├── screenshots/              evidence for the report
-└── report/                   final report (docx) + video script
+└── report/                   final report (docx + pdf)
 ```
 
 ## 0. One command: run the entire flow
@@ -74,6 +74,7 @@ To keep live dashboards running while you record, use:
 ```
 Open `http://localhost:8000/monitoring`, `http://localhost:8000/docs` and `http://localhost:5000` in a browser
 (in VS Code Remote: Ports tab, then "Open in Browser").
+`./scripts/demo_walkthrough.sh` gives a guided, step-by-step tour of the whole project (press Enter between steps).
 
 ## 1. Setup
 

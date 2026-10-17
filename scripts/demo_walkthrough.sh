@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  video_walkthrough.sh - step-by-step presenter script for the demo video
+#  demo_walkthrough.sh - guided step-by-step tour of the whole project
 #
 #  Prerequisite: ./run_all.sh has completed once (model, mlflow.db, logs exist).
-#  Run from the repo root:   ./scripts/video_walkthrough.sh
+#  Run from the repo root:   ./scripts/demo_walkthrough.sh
 #  Each step prints a title, shows the command, runs it, then waits for Enter.
-#  Narration for every step: report/VIDEO_SCRIPT.md
 #
 #  Options:  --from N     start at step N (e.g. after a retake)
 #            --no-docker  skip the Docker step
