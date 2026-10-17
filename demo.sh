@@ -37,12 +37,20 @@ done
 
 mkdir -p logs/demo
 PIDS=()
-stop() { echo; echo "stopping demo..."; for p in "${PIDS[@]:-}"; do kill "$p" 2>/dev/null || true; done; }
+STOPPED=""
+stop() {
+  [[ -n "$STOPPED" ]] && return; STOPPED=1
+  echo; echo "stopping demo..."
+  # each service runs in its own process group (setsid), so this also stops grandchildren
+  # such as the gunicorn workers that `mlflow ui` spawns
+  for p in "${PIDS[@]:-}"; do kill -TERM -- "-$p" 2>/dev/null || kill "$p" 2>/dev/null || true; done
+  pkill -P $$ 2>/dev/null || true
+}
 trap stop EXIT INT TERM
 
-"$PY" -m uvicorn cardiorisk.serving.app:app --host 0.0.0.0 --port "$API_PORT" > logs/demo/api.log 2>&1 &
+setsid "$PY" -m uvicorn cardiorisk.serving.app:app --host 0.0.0.0 --port "$API_PORT" > logs/demo/api.log 2>&1 &
 PIDS+=("$!")
-"$PY" -m mlflow ui --backend-store-uri "sqlite:///$ROOT/mlflow.db" --host 0.0.0.0 --port "$MLFLOW_PORT" \
+setsid "$PY" -m mlflow ui --backend-store-uri "sqlite:///$ROOT/mlflow.db" --host 0.0.0.0 --port "$MLFLOW_PORT" \
   > logs/demo/mlflow.log 2>&1 &
 PIDS+=("$!")
 
@@ -52,8 +60,8 @@ for _ in $(seq 1 60); do curl -sf "http://127.0.0.1:$MLFLOW_PORT" >/dev/null 2>&
 
 if [[ $TRAFFIC -eq 1 ]]; then
   # gentle, continuous traffic so the dashboards move (about 3 requests/s, 5% invalid)
-  ( while true; do "$PY" scripts/load_test.py --url "http://127.0.0.1:$API_PORT" --requests 200 \
-        --delay 0.3 --seed $RANDOM >/dev/null 2>&1 || true; done ) &
+  setsid bash -c 'while true; do "$0" scripts/load_test.py --url "http://127.0.0.1:$1" --requests 200 \
+        --delay 0.3 --seed $RANDOM >/dev/null 2>&1 || true; done' "$PY" "$API_PORT" &
   PIDS+=("$!")
 fi
 
@@ -73,4 +81,8 @@ cat <<EOF
 EOF
 curl -s -X POST "http://127.0.0.1:$API_PORT/predict" -H 'content-type: application/json' -d @samples/high_risk.json
 echo; echo; echo "  JSON request logs (live):"
-tail -n 0 -f logs/demo/api.log | grep --line-buffered '"msg": "prediction"' | cut -c1-170
+# stream in the background and `wait`: bash runs traps during `wait`, but would
+# defer them until a foreground `tail -f` exits (i.e. never)
+setsid bash -c 'tail -n 0 -f logs/demo/api.log | grep --line-buffered "\"msg\": \"prediction\"" | cut -c1-170' &
+PIDS+=("$!")
+wait
