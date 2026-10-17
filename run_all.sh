@@ -80,11 +80,17 @@ run_stage() {  # run_stage <name> <function>
   echo "${B}==> [$name]${N} (log: logs/$STAMP/$name.log)"
   # NOTE: not "if ( ... )" - bash disables errexit inside an if-condition,
   # which would let a failing command in the stage go unnoticed.
-  local rc=0
+  local rc=0 hb
+  # heartbeat: long stages (pip install, tests, grid search) are otherwise silent for minutes
+  ( while sleep 30; do
+      echo "    ... [$name] still running ($((SECONDS - t0))s) - live log: tail -f logs/$STAMP/$name.log" >&2
+    done ) &
+  hb=$!
   set +e
   ( set -Eeuo pipefail; "$fn" ) > >(tee "$log") 2>&1
   rc=$?
   set -e
+  kill "$hb" 2>/dev/null; wait "$hb" 2>/dev/null || true
   wait 2>/dev/null || true   # let tee flush
   if [[ $rc -eq 0 ]]; then
     SUMMARY+=("$(printf '%-8s %s  (%ss)' "$name" "${G}ok${N}" "$((SECONDS - t0))")")
@@ -147,7 +153,8 @@ EOF
     fi
     .venv/bin/python -m pip install -q --upgrade pip
   fi
-  "$PY" -m pip install -q -r requirements.txt
+  echo "installing pinned requirements (first run takes 1-2 minutes)..."
+  "$PY" -m pip install --progress-bar off --disable-pip-version-check -r requirements.txt
   "$PY" -m pip install -q -e .
   "$PY" -c "import sklearn, mlflow, fastapi; print('sklearn', sklearn.__version__, '| mlflow', mlflow.__version__, '| fastapi', fastapi.__version__)"
 }
@@ -193,12 +200,13 @@ stage_serve() {
 }
 
 stage_docker() {
-  if ! command -v docker >/dev/null || ! docker info >/dev/null 2>&1; then
-    echo "docker not available here - skipping (CI builds and tests the image)"; return 0
+  # `docker info` can hang forever when the daemon socket exists but the daemon is stuck
+  if ! command -v docker >/dev/null || ! timeout 15 docker info >/dev/null 2>&1; then
+    echo "docker not available or not responding here - skipping (CI builds and tests the image)"; return 0
   fi
   # DOCKER_BUILD_ARGS lets you add e.g. "--network host" or "--build-arg BASE_IMAGE=..."
   # shellcheck disable=SC2086
-  docker build ${DOCKER_BUILD_ARGS:-} --build-arg GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo local)" \
+  timeout "${DOCKER_BUILD_TIMEOUT:-900}" docker build ${DOCKER_BUILD_ARGS:-} --build-arg GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo local)" \
                --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" -t "$IMAGE" .
   docker rm -f heart-api-runall >/dev/null 2>&1 || true
   local port=$((API_PORT + 1))
