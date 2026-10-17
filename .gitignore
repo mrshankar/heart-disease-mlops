@@ -17,3 +17,4 @@ mlartifacts/
 kubeflow/heart_disease_pipeline.yaml
 .ipynb_checkpoints/
 logs/
+reports/evidence_report.html

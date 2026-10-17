@@ -105,6 +105,12 @@ print_summary() {
   echo; echo "${B}================ summary ================${N}"
   printf '  %s\n' "${SUMMARY[@]}"
   echo "  logs: logs/$STAMP/"
+  printf '%s\n' "${SUMMARY[@]}" | sed 's/\x1b\[[0-9;]*m//g' > "$LOG_DIR/summary.txt"
+  # one HTML page with every plot, metric and log of this run (for screenshots / the video)
+  if [[ -n "${PY:-}" && -x "${PY:-}" ]]; then
+    "$PY" scripts/evidence_report.py --logs "$LOG_DIR" 2>/dev/null \
+      && echo "  evidence: reports/evidence_report.html   (open in a browser; ./demo.sh for live dashboards)" || true
+  fi
 }
 
 wait_http() {  # wait_http <url> <seconds>

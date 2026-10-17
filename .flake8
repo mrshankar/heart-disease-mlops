@@ -3,3 +3,4 @@ max-line-length = 120
 exclude = .git,__pycache__,.venv,venv,build,mlruns,mlartifacts,notebooks
 per-file-ignores =
     scripts/*.py: E402
+    scripts/evidence_report.py: E402,E501

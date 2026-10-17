@@ -65,6 +65,16 @@ git clone https://github.com/mrshankar/heart-disease-mlops.git && cd heart-disea
 Each stage logs to `logs/<timestamp>/<stage>.log`. The script stops at the first failing stage,
 prints the end of that stage's log, and exits non-zero. The Docker stage is skipped automatically if Docker isn't available.
 
+**Showing the results (screenshots / video).** At the end, `run_all.sh` writes `reports/evidence_report.html`:
+one self-contained page with every plot, metric table, test result, MLflow run count and API output from that run.
+To keep live dashboards running while you record, use:
+
+```bash
+./demo.sh        # API :8000 + MLflow UI :5000 + steady background traffic; Ctrl+C to stop
+```
+Open `http://localhost:8000/monitoring`, `http://localhost:8000/docs` and `http://localhost:5000` in a browser
+(in VS Code Remote: Ports tab, then "Open in Browser").
+
 ## 1. Setup
 
 Requires Python 3.10-3.13 (CI and Docker use 3.11).
