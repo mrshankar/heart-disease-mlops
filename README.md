@@ -74,7 +74,7 @@ To keep live dashboards running while you record, use:
 ```
 Open `http://localhost:8000/monitoring`, `http://localhost:8000/docs` and `http://localhost:5000` in a browser
 (in VS Code Remote: Ports tab, then "Open in Browser").
-`./scripts/demo_walkthrough.sh` gives a guided, step-by-step tour of the whole project (press Enter between steps).
+`./scripts/demo_walkthrough.sh` gives a guided, step-by-step tour of the whole project (press Enter between steps). It opens each page in the browser at the right step: through VS Code's port forwarding when you use VS Code Remote, or `xdg-open` on a VM desktop. Use `--no-browser` to only print the links, and `--from N` to resume at step N.
 
 ## 1. Setup
 
