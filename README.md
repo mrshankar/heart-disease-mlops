@@ -5,7 +5,7 @@
 A heart-disease risk classifier trained on the UCI Heart Disease data and served as a monitored REST API.
 The project covers reproducible training with MLflow tracking and a model registry, automated testing,
 a GitHub Actions CI/CD pipeline, a Docker image, Kubernetes manifests, and Prometheus/Grafana monitoring.
-It also runs end to end in **BITS Prayogshala** (Kubeflow).
+(Kubeflow).
 
 ![architecture](reports/figures/architecture.png)
 
