@@ -20,6 +20,7 @@ a GitHub Actions CI/CD pipeline, a Docker image, Kubernetes manifests, and Prome
 | Serving | FastAPI `/predict` returns prediction, probability, confidence, risk band and which inputs were imputed |
 | Deployment | Kubernetes Deployment (2-6 pods, HPA), LoadBalancer Service, Ingress, PDB; zero-downtime rollouts verified |
 | Monitoring | Prometheus metrics + 5 alert rules, Grafana dashboard, JSON request logs, built-in `/monitoring` page |
+| **Demo video** | [`report/MLOps_Assignment1_Demo.mp4`](report/MLOps_Assignment1_Demo.mp4) (about 10 min, full pipeline walkthrough) |
 
 ---
 
@@ -43,7 +44,7 @@ a GitHub Actions CI/CD pipeline, a Docker image, Kubernetes manifests, and Prome
 ├── kubeflow/pipeline.py      KFP v2 pipeline for Prayogshala
 ├── .github/workflows/ci-cd.yml
 ├── screenshots/              evidence for the report
-└── report/                   final report (docx + pdf)
+└── report/                   final report (docx + pdf) + demo video (mp4)
 ```
 
 ## 0. One command: run the entire flow
