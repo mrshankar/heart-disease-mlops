@@ -16,7 +16,7 @@ a GitHub Actions CI/CD pipeline, a Docker image, Kubernetes manifests, and Prome
 | CV ROC-AUC (5-fold) | **0.905 ± 0.014** (random forest 0.895, gradient boosting 0.891) |
 | Hold-out test | ROC-AUC 0.900, recall 0.912, specificity 0.732, accuracy 0.832 at the tuned threshold 0.39 |
 | Tracking | MLflow: 78 runs (pipeline > model family > every grid candidate), registry alias `champion` |
-| Tests | 50 pytest tests, 97% line coverage; flake8 clean |
+| Tests | 50 pytest tests, 96% line coverage; flake8 clean |
 | Serving | FastAPI `/predict` returns prediction, probability, confidence, risk band and which inputs were imputed |
 | Deployment | Kubernetes Deployment (2-6 pods, HPA), LoadBalancer Service, Ingress, PDB; zero-downtime rollouts verified |
 | Monitoring | Prometheus metrics + 5 alert rules, Grafana dashboard, JSON request logs, built-in `/monitoring` page |
